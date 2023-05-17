@@ -4,6 +4,12 @@ const express = require("express");
 
 const app = express();
 
+//include the method-override package place this where you instructor places it
+const methodOverride = require("method-override");
+//...
+//after app has been defined
+//use methodOverride.  We'll be adding a query parameter to our delete form named _method
+
 const port = 3000;
 const mongoose = require("mongoose");
 
@@ -22,6 +28,8 @@ mongoose.connection.once("open", () => {
 
 // Middleware
 
+app.use(methodOverride("_method"));
+
 app.use((req, res, next) => {
   console.log("I run for all routes");
   next();
@@ -37,12 +45,6 @@ const Fruit = require("./models/fruits.js");
 const vegetables = require("./models/vegetables.js");
 
 // Routes
-
-//put this above your Show route
-
-// app.get("/fruits", function (req, res) {
-//   res.render("../views/fruits/Index", { fruits: Fruit });
-// });
 app.get("/fruits", (req, res) => {
   Fruit.find({}, (error, allFruits) => {
     res.render("fruits/Index", {
@@ -62,6 +64,24 @@ app.get("/vegetables/new", (req, res) => {
   res.render("../views/vegetables/New");
 });
 
+app.delete("/fruits/:id", (req, res) => {
+  Fruit.findByIdAndRemove(req.params.id, (err, data) => {
+    res.redirect("/fruits"); //redirect back to fruits index
+  });
+});
+
+app.put("/fruits/:id", (req, res) => {
+  if (req.body.readyToEat === "on") {
+    req.body.readyToEat = true;
+  } else {
+    req.body.readyToEat = false;
+  }
+  Fruit.findByIdAndUpdate(req.params.id, req.body, (err, updatedFruit) => {
+    console.log(updatedFruit);
+    res.redirect(`/fruits/${req.params.id}`);
+  });
+});
+
 app.post("/fruits", (req, res) => {
   if (req.body.readyToEat === "on") {
     //if checked, req.body.readyToEat is set to 'on'
@@ -71,7 +91,7 @@ app.post("/fruits", (req, res) => {
     req.body.readyToEat = false;
   }
   Fruit.create(req.body, (error, createdFruit) => {
-    res.redirect('/fruits');
+    res.redirect("/fruits");
   });
 });
 
@@ -87,10 +107,26 @@ app.post("/vegetables", (req, res) => {
   res.redirect("/vegetables");
 });
 
-app.get("/fruits/:indexOfFruitsArray", function (req, res) {
-  res.render("fruits/Show", {
-    //second param must be an object
-    fruit: Fruit[req.params.indexOfFruitsArray], //there will be a variable available inside the ejs file called fruit, its value is fruits[req.params.indexOfFruitsArray]
+// edit
+app.get("/fruits/:id/edit", (req, res) => {
+  Fruit.findById(req.params.id, (err, foundFruit) => {
+    //find the fruit
+    if (!err) {
+      res.render("../views/fruits/Edit", {
+        fruit: foundFruit, //pass in the found fruit so we can prefill the form
+      });
+    } else {
+      res.send({ msg: err.message });
+    }
+  });
+});
+
+// show
+app.get("/fruits/:id", (req, res) => {
+  Fruit.findById(req.params.id, (err, foundFruit) => {
+    res.render("../views/fruits/Show", {
+      fruit: foundFruit,
+    });
   });
 });
 
